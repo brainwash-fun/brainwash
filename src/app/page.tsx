@@ -1,16 +1,46 @@
-import Hero from "@/components/hero";
-import ConnectSupabaseSteps from "@/components/tutorial/connect-supabase-steps";
-import SignUpUserSteps from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
+"use client";
 
-export default async function Index() {
+import Title from "@/components/Title";
+import ProjectCard from "@/components/ProjectCard";
+import { Canvas } from "@react-three/fiber";
+import { EffectComposer, Noise } from "@react-three/postprocessing";
+
+export default function Home() {
   return (
-    <>
-      <Hero />
-      <main className="flex-1 flex flex-col gap-6 px-4">
-        <h2 className="font-medium text-xl mb-4">Next steps</h2>
-        {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-      </main>
-    </>
+    <main className="container mx-auto px-4 w-[90%] relative">
+      <Canvas
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: -1,
+        }}
+      >
+        <EffectComposer>
+          <Noise opacity={0.5} />
+        </EffectComposer>
+      </Canvas>
+      <Title />
+      <div className="flex flex-wrap justify-center gap-10">
+        <ProjectCard
+          title="Stance"
+          imageSrc="/stance_card.png"
+          link="/stance"
+        />
+        <ProjectCard
+          title="Temp1"
+          imageSrc="https://m.media-amazon.com/images/I/81AYOKoD+yL._AC_UF894,1000_QL80_.jpg"
+          link="/temp1"
+        />
+        <ProjectCard
+          title="Temp2"
+          imageSrc="https://www.shutterstock.com/image-photo/abstract-hypnotic-circle-screen-optical-600nw-2366976867.jpg"
+          link="/temp2"
+        />
+        {/* Add more ProjectCards here as needed */}
+      </div>
+    </main>
   );
 }
