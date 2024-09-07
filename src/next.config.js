@@ -1,10 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['m.media-amazon.com', 'www.shutterstock.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'm.media-amazon.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.shutterstock.com',
+      },
+    ],
   },
-  fontLoaders: [{ loader: '@next/font/google', options: { subsets: ['latin'] } }],
   transpilePackages: ['@mui/material', '@mui/icons-material'],
+  reactStrictMode: true,
+  compiler: {
+    reactRemoveProperties: { properties: ['^data-new-gr-c-s-check-loaded$', '^data-gr-ext-installed$'] }
+  }
 };
 
 module.exports = nextConfig;

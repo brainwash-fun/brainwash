@@ -9,20 +9,24 @@ interface ProjectCardProps {
   link: string;
 }
 
-export default function ProjectCard({
-  title,
-  imageSrc,
-  link,
-}: ProjectCardProps) {
+const ProjectCard: React.FC<ProjectCardProps> = ({ title, imageSrc, link }) => {
   return (
     <Link href={link}>
       <motion.div
         className="w-[400px] h-[200px] bg-white rounded-lg shadow-md border border-black overflow-hidden cursor-pointer relative"
         whileHover={{ scale: 1.05 }}
-        transition={{ type: "spring", stiffness: 300 }}
+        transition={{ type: "spring", stiffness: 150 }}
       >
-        <Image src={imageSrc} alt={title} layout="fill" objectFit="cover" />
+        <Image
+          src={imageSrc}
+          alt={title}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover"
+        />
       </motion.div>
     </Link>
   );
-}
+};
+
+export default ProjectCard;
