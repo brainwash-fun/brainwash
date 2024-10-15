@@ -1,60 +1,78 @@
-import client from "@/utils/supabase/client";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "./types";
 
 type Bills = Database["public"]["Tables"]["bills"];
 
 class BillModel {
-  static async get(number: number, type: string): Promise<Bills["Row"] | null> {
-    const { data, error } = await client
+  private client: SupabaseClient;
+
+  constructor(client: SupabaseClient) {
+    this.client = client;
+  }
+
+  async get(
+    congress_number: string,
+    number: number,
+    type: string
+  ): Promise<Bills["Row"] | null> {
+    const { data, error } = await this.client
       .from("bills")
       .select("*")
+      .eq("congress_number", congress_number)
       .eq("number", number)
       .eq("type", type)
       .single();
 
-    if (error) throw new Error("Error fetching bill!");
+    // if not found, return null
+    if (error) return null;
     return data;
   }
 
-  static async insert(row: Bills["Insert"]): Promise<void> {
-    const { error } = await client.from("bills").insert(row);
+  async insert(row: Bills["Insert"]): Promise<void> {
+    const { error } = await this.client.from("bills").insert(row);
     if (error) throw new Error("Error inserting bill!");
   }
 
-  static async update(row: Bills["Update"]): Promise<void> {
-    if (!row.number || !row.type) {
-      throw new Error("Bill number and type are required for update!");
+  async update(row: Bills["Update"]): Promise<void> {
+    if (!row.congress_number || !row.number || !row.type) {
+      throw new Error(
+        "Congress number, bill number, and type are required for update!"
+      );
     }
 
     row.updated_at = new Date().toISOString();
 
-    const { error } = await client
+    const { error } = await this.client
       .from("bills")
       .update(row)
+      .eq("congress_number", row.congress_number)
       .eq("number", row.number)
       .eq("type", row.type);
 
     if (error) throw new Error("Error updating bill!");
   }
 
-  static async bulkInsert(rows: Bills["Insert"][]): Promise<void> {
-    const { error } = await client.from("bills").insert(rows);
+  async bulkInsert(rows: Bills["Insert"][]): Promise<void> {
+    const { error } = await this.client.from("bills").insert(rows);
     if (error) throw new Error("Error bulk inserting bills!");
   }
 
-  static async bulkGet(
-    billKeys: Array<{ number: number; type: string }>
+  async bulkGet(
+    billKeys: Array<{ congress_number: string; number: number; type: string }>
   ): Promise<Bills["Row"][]> {
     if (billKeys.length === 0) {
       return [];
     }
 
-    const { data, error } = await client
+    const { data, error } = await this.client
       .from("bills")
       .select("*")
       .or(
         billKeys
-          .map((key) => `and(number.eq.${key.number},type.eq.${key.type})`)
+          .map(
+            (key) =>
+              `and(congress_number.eq.${key.congress_number},number.eq.${key.number},type.eq.${key.type})`
+          )
           .join(",")
       );
 
@@ -62,19 +80,28 @@ class BillModel {
     return data || [];
   }
 
-  static async bulkUpsert(rows: Bills["Insert"][]): Promise<void> {
+  async bulkUpsert(rows: Bills["Insert"][]): Promise<void> {
     const existingBills = await this.bulkGet(
-      rows.map((row) => ({ number: row.number, type: row.type }))
+      rows.map((row) => ({
+        congress_number: row.congress_number,
+        number: row.number,
+        type: row.type,
+      }))
     );
     const existingBillMap = new Map(
-      existingBills.map((bill) => [`${bill.number}-${bill.type}`, bill])
+      existingBills.map((bill) => [
+        `${bill.congress_number}-${bill.number}-${bill.type}`,
+        bill,
+      ])
     );
 
     const billsToUpdate: Bills["Update"][] = [];
     const billsToInsert: Bills["Insert"][] = [];
 
     for (const row of rows) {
-      const existingBill = existingBillMap.get(`${row.number}-${row.type}`);
+      const existingBill = existingBillMap.get(
+        `${row.congress_number}-${row.number}-${row.type}`
+      );
       if (existingBill && existingBill.summary !== row.summary) {
         billsToUpdate.push({
           ...row,
@@ -86,14 +113,14 @@ class BillModel {
     }
 
     if (billsToUpdate.length > 0) {
-      const { error: updateError } = await client
+      const { error: updateError } = await this.client
         .from("bills")
         .upsert(billsToUpdate);
       if (updateError) throw new Error("Error updating bills in bulk!");
     }
 
     if (billsToInsert.length > 0) {
-      const { error: insertError } = await client
+      const { error: insertError } = await this.client
         .from("bills")
         .insert(billsToInsert);
       if (insertError) throw new Error("Error inserting new bills in bulk!");

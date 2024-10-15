@@ -1,20 +1,24 @@
 import crypto from "crypto";
 
-const addQueryParams = (url: string, params: Record<string, string>) => {
+const addQueryParams = (
+  url: string,
+  params: Record<string, string>,
+  addQuestionMark: boolean = true
+) => {
   const queryParams = Object.entries(params)
     .map(([key, value]) => `${key}=${value}`)
     .join("&");
-  return queryParams ? `${url}?${queryParams}` : url;
+  if (addQuestionMark) {
+    return queryParams ? `${url}?${queryParams}` : url;
+  }
+  return queryParams ? `${url}&${queryParams}` : url;
 };
 
 // Url parameters provided in an array, where the dynamic part is also provided in the relevant index.
 const constructUrl = (baseUrl: string, params: string[]) => {
   let url = baseUrl;
   for (let i = 0; i < params.length; i++) {
-    url += params[i];
-    if (i < params.length - 1) {
-      url += "/";
-    }
+    url += "/" + params[i];
   }
   return url;
 };

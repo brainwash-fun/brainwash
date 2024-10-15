@@ -14,6 +14,7 @@ export type Database = {
           bill_number: number;
           bill_type: string;
           bioguide_id: string | null;
+          congress_number: number;
           created_at: string;
           is_main_sponsor: boolean | null;
           updated_at: string | null;
@@ -22,6 +23,7 @@ export type Database = {
           bill_number: number;
           bill_type: string;
           bioguide_id?: string | null;
+          congress_number: number;
           created_at?: string;
           is_main_sponsor?: boolean | null;
           updated_at?: string | null;
@@ -30,6 +32,7 @@ export type Database = {
           bill_number?: number;
           bill_type?: string;
           bioguide_id?: string | null;
+          congress_number?: number;
           created_at?: string;
           is_main_sponsor?: boolean | null;
           updated_at?: string | null;
@@ -40,7 +43,7 @@ export type Database = {
         Row: {
           chamber: string | null;
           co_sponsores: Json | null;
-          congress_number: string | null;
+          congress_number: string;
           created_at: string;
           name: string | null;
           number: number;
@@ -53,7 +56,7 @@ export type Database = {
         Insert: {
           chamber?: string | null;
           co_sponsores?: Json | null;
-          congress_number?: string | null;
+          congress_number: string;
           created_at?: string;
           name?: string | null;
           number: number;
@@ -66,7 +69,7 @@ export type Database = {
         Update: {
           chamber?: string | null;
           co_sponsores?: Json | null;
-          congress_number?: string | null;
+          congress_number?: string;
           created_at?: string;
           name?: string | null;
           number?: number;
@@ -84,9 +87,7 @@ export type Database = {
           created_at: string;
           current_party: string | null;
           home_state: string | null;
-          id: number;
           name: string;
-          terms: Json | null;
           updated_at: string | null;
         };
         Insert: {
@@ -94,9 +95,7 @@ export type Database = {
           created_at?: string;
           current_party?: string | null;
           home_state?: string | null;
-          id?: number;
           name: string;
-          terms?: Json | null;
           updated_at?: string | null;
         };
         Update: {
@@ -104,9 +103,7 @@ export type Database = {
           created_at?: string;
           current_party?: string | null;
           home_state?: string | null;
-          id?: number;
           name?: string;
-          terms?: Json | null;
           updated_at?: string | null;
         };
         Relationships: [];
