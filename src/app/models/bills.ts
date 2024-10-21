@@ -30,7 +30,10 @@ class BillModel {
 
   async insert(row: Bills["Insert"]): Promise<void> {
     const { error } = await this.client.from("bills").insert(row);
-    if (error) throw new Error("Error inserting bill!");
+    if (error) {
+      console.log("error", error);
+      throw new Error("Error inserting bill!");
+    }
   }
 
   async update(row: Bills["Update"]): Promise<void> {

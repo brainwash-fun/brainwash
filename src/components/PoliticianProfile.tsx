@@ -1,7 +1,7 @@
 import Image from "next/image";
 import PolicyList from "./PolicyList";
 
-interface Politician {
+export interface Politician {
   name: string;
   image: string;
   party: string;

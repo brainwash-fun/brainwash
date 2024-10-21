@@ -144,3 +144,82 @@ export interface DataGovMembersResponse {
   pagination: pagination;
   request: request;
 }
+
+/* Bill response from politics.congress.gov
+
+response {
+  bill: {
+    actions: {
+      count: 2,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/actions?format=json'
+    },
+    committees: {
+      count: 1,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/committees?format=json'
+    },
+    congress: 115,
+    introducedDate: '2018-06-06',
+    latestAction: {
+      actionDate: '2018-06-06',
+      text: 'Read twice and referred to the Committee on Environment and Public Works.'
+    },
+    number: '3015',
+    originChamber: 'Senate',
+    originChamberCode: 'S',
+    policyArea: { name: 'Environmental Protection' },
+    relatedBills: {
+      count: 1,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/relatedbills?format=json'
+    },
+    sponsors: [ [Object] ],
+    subjects: {
+      count: 5,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/subjects?format=json'
+    },
+    summaries: {
+      count: 1,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/summaries?format=json'
+    },
+    textVersions: {
+      count: 1,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/text?format=json'
+    },
+    title: 'Water Affordability Act',
+    titles: {
+      count: 3,
+      url: 'https://api.congress.gov/v3/bill/115/s/3015/titles?format=json'
+    },
+    type: 'S',
+    updateDate: '2024-02-16T19:17:19Z',
+    updateDateIncludingText: '2024-02-16T19:17:19Z'
+  },
+  request: {
+    billNumber: '3015',
+    billType: 's',
+    congress: '115',
+    contentType: 'application/json',
+    format: 'json'
+  }
+}
+*/
+
+type undefinedOr<T> = T | undefined;
+
+interface subField {
+  count: number;
+  url: string;
+}
+// interface Bill {
+//   actions: undefinedOr<subField>;
+//   committees: undefinedOr<subField>;
+//   subjects: undefinedOr<subField>;
+//   summaries: undefinedOr<subField>;
+//   textVersions: undefinedOr<subField>;
+//   titles: undefinedOr<subField>;
+//   congress: number;
+//   introducedDate: string;
+//   latestAction: {
+//     actionDate: string;
+//     text: string;
+//   };
+// }

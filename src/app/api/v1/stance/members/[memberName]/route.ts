@@ -1,21 +1,14 @@
-import { BillInvolvementModel, BillModel, PoliticianModel } from "@/app/models";
 import { NextRequest, NextResponse } from "next/server";
-
-import {
-  getPoliticianInfo,
-  getBillsForMember,
-} from "../../../../../../utils/api/politics";
 import { createClient } from "../../../../../../utils/supabase/server";
+import { getPoliticianInfo, getBillsForMember } from "../../../../../../utils/api/politics";
+import { PoliticianModel, BillModel, BillInvolvementModel } from "@/app/models";
+import { ServiceContext } from "../../../../../../utils/api/politics";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { memberName: string } }
 ) {
   const { memberName } = params;
-
-  // Create the Politician Model with the server side supabase client
-  const supabase = createClient();
-  const politicianModel = new PoliticianModel(supabase);
 
   if (!memberName) {
     return NextResponse.json(
@@ -25,10 +18,22 @@ export async function GET(
   }
 
   try {
-    // Politician name must be separated by a space, not a comma
+    // Create the Supabase client
+    const supabase = createClient();
+
+    // Create the ServiceContext
+    const svcCtx: ServiceContext = {
+      client: supabase,
+      models: {
+        politicianModel: new PoliticianModel(supabase),
+        billModel: new BillModel(supabase),
+        billInvolvementModel: new BillInvolvementModel(supabase),
+      }
+    };
+
     // Get politician information
     const politicianInfo = await getPoliticianInfo(
-      politicianModel,
+      svcCtx,
       memberName.toLowerCase()
     );
 
@@ -39,17 +44,13 @@ export async function GET(
       );
     }
 
-    const billModel = new BillModel(supabase);
-    const billInvolvementModel = new BillInvolvementModel(supabase);
     const sponsoredBills = await getBillsForMember(
-      billModel,
-      billInvolvementModel,
+      svcCtx,
       politicianInfo.bioguide_id,
       true
     );
     const cosponsoredBills = await getBillsForMember(
-      billModel,
-      billInvolvementModel,
+      svcCtx,
       politicianInfo.bioguide_id,
       false
     );

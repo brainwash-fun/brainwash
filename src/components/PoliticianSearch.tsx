@@ -23,7 +23,7 @@ const StyledOption = styled("li")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   color: theme.palette.primary.main,
   "&:hover": {
-    backgroundColor: theme.palette.background.hover,
+    backgroundColor: theme.palette.primary.main,
   },
 }));
 
@@ -91,7 +91,7 @@ export default function PoliticianSearch() {
             padding: 0,
           },
           "& .MuiAutocomplete-option:hover": {
-            backgroundColor: stanceTheme.palette.background.hover,
+            backgroundColor: stanceTheme.palette.primary.main,
           },
         }}
         onChange={(event, value) => value && handleSearch(value)}

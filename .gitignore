@@ -1,14 +1,17 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+./.next
+./src/.next
+./node_modules
+./src/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
 /coverage
-
+ß
 # next.js
 /.next/
 /out/

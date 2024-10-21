@@ -39,10 +39,13 @@ const getBillInfo = async (
   return data;
 };
 
-const getPoliticianInfo = async (svcContext: ServiceContext, name: string) => {
-  const politicianModel =
-    svcContext.models?.politicianModel ||
-    new PoliticianModel(svcContext.client);
+const getPoliticianInfo = async (svcCtx: ServiceContext, name: string) => {
+  const politicianModel = svcCtx.models?.politicianModel;
+  if (!politicianModel) {
+    throw new Error("PoliticianModel not provided in service context");
+  }
+
+  // attempt getting the politician info from the db
   const lowerName = name.toLowerCase();
   const politician = await politicianModel.get(name);
   if (politician) {
@@ -50,8 +53,9 @@ const getPoliticianInfo = async (svcContext: ServiceContext, name: string) => {
     return politician;
   }
 
+  // if not in db, get from congress.gov
   const response = await getPoliticianListsSearch(
-    svcContext,
+    svcCtx,
     defaultUrls.member,
     lowerName
   );
@@ -60,7 +64,9 @@ const getPoliticianInfo = async (svcContext: ServiceContext, name: string) => {
     throw new Error(`Politician ${name} not found`);
   }
 
+  // Save the politician to the database
   const politicianData = {
+    // Create random id for now. I dont care what it is as long as it is random.
     name: response.member.name,
     bioguide_id: response.member.bioguideId,
     current_party: response.member.partyName,
@@ -73,13 +79,15 @@ const getPoliticianInfo = async (svcContext: ServiceContext, name: string) => {
 };
 
 const getPoliticianListsSearch = async (
-  svcContext: ServiceContext,
+  svcCtx: ServiceContext,
   url: string,
   lowerName: string
 ) => {
-  const politicianModel =
-    svcContext.models?.politicianModel ||
-    new PoliticianModel(svcContext.client);
+  const politicianModel = svcCtx.models?.politicianModel;
+  if (!politicianModel) {
+    throw new Error("PoliticianModel not provided in service context");
+  }
+
   const finalApiKey = checkApiKey(apiKey);
   const finalUrl = addQueryParams(url, { api_Key: finalApiKey, limit: "250" });
   let data: DataGovMembersResponse = (await axios.get(finalUrl)).data;
@@ -106,6 +114,7 @@ const getPoliticianListsSearch = async (
         targetMember = member;
         break;
       }
+      // Collect politician data
     }
 
     if (!targetMember && data.pagination.next) {
@@ -113,6 +122,7 @@ const getPoliticianListsSearch = async (
     }
   }
 
+  // Bulk save politicians after the loop
   if (politiciansToSave.length > 0) {
     await politicianModel.bulkSave(politiciansToSave);
   }
@@ -122,12 +132,12 @@ const getPoliticianListsSearch = async (
   }
 
   const sponsoredBills = await getBillsForMember(
-    svcContext,
+    svcCtx,
     targetMember.bioguideId,
     true
   );
   const cosponsoredBills = await getBillsForMember(
-    svcContext,
+    svcCtx,
     targetMember.bioguideId,
     false
   );
@@ -140,113 +150,139 @@ const getPoliticianListsSearch = async (
 };
 
 const getBillsForMember = async (
-  svcContext: ServiceContext,
+  svcCtx: ServiceContext,
   bioguideId: string,
   isSponsored: boolean
 ): Promise<any[]> => {
-  const billModel =
-    svcContext.models?.billModel || new BillModel(svcContext.client);
-  const billInvolvementModel =
-    svcContext.models?.billInvolvementModel ||
-    new BillInvolvementModel(svcContext.client);
+  try {
+    const billModel = svcCtx.models?.billModel;
+    const billInvolvementModel = svcCtx.models?.billInvolvementModel;
 
-  const finalApiKey = checkApiKey(apiKey);
-  const baseUrl = defaultUrls.member;
-  const endpoint = isSponsored
-    ? `${bioguideId}/sponsored-legislation`
-    : `${bioguideId}/cosponsored-legislation`;
-  const url = constructUrl(baseUrl, [endpoint]);
-  const finalUrl = addQueryParams(url, { api_Key: finalApiKey, limit: "250" });
+    if (!billModel || !billInvolvementModel) {
+      throw new Error(
+        "BillModel or BillInvolvementModel not provided in service context"
+      );
+    }
 
-  let allBills: any[] = [];
-  let nextUrl = finalUrl;
-  let billsToFetch: any[] = [];
-  let billInvolvementsToAdd: any[] = [];
-
-  while (nextUrl) {
-    const response = await axios.get(nextUrl);
-    const data = response.data;
-
-    const bills = isSponsored ? data.sponsoredLegislation : data.cosponsors;
-    if (!bills || bills.length === 0) break;
-
-    const processedBills = await Promise.all(
-      bills.map(async (bill: Bill) => {
-        const existingBill = await billModel.get(
-          bill.congress.toString(),
-          parseInt(bill.number),
-          bill.type
-        );
-
-        const billInvolvement = {
-          bill_number: parseInt(bill.number),
-          bill_type: bill.type,
-          congress_number: bill.congress,
-          bioguide_id: bioguideId,
-          is_main_sponsor: isSponsored,
-        };
-
-        const existingBillInvolvement = await billInvolvementModel.get(
-          billInvolvement.bill_type,
-          billInvolvement.bill_number,
-          billInvolvement.congress_number
-        );
-
-        if (!existingBillInvolvement) {
-          billInvolvementsToAdd.push(billInvolvement);
-        }
-
-        if (existingBill) {
-          return { bill: existingBill, needsFetch: false };
-        } else {
-          return { bill, needsFetch: true };
-        }
-      })
-    );
-
-    processedBills.forEach(({ bill, needsFetch }) => {
-      if (needsFetch) {
-        billsToFetch.push(bill);
-      } else {
-        allBills.push(bill);
-      }
+    const finalApiKey = checkApiKey(apiKey);
+    const baseUrl = defaultUrls.member;
+    const endpoint = isSponsored
+      ? `${bioguideId}/sponsored-legislation`
+      : `${bioguideId}/cosponsored-legislation`;
+    const url = constructUrl(baseUrl, [endpoint]);
+    const finalUrl = addQueryParams(url, {
+      api_Key: finalApiKey,
+      limit: "250",
     });
 
-    nextUrl = data.pagination?.next;
+    let allBills: any[] = [];
+    let nextUrl = finalUrl;
+    let billsToFetch: any[] = [];
+    let billInvolvementsToAdd: any[] = [];
+
+    while (nextUrl) {
+      const response = await axios.get(nextUrl);
+      const data = response.data;
+
+      const bills = isSponsored ? data.sponsoredLegislation : data.cosponsors;
+      if (!bills || bills.length === 0) break;
+
+      const processedBills = await Promise.all(
+        bills.map(async (bill: Bill) => {
+          const existingBill = await billModel.get(
+            bill.congress.toString(),
+            parseInt(bill.number),
+            bill.type
+          );
+
+          const billInvolvement = {
+            bill_number: parseInt(bill.number),
+            bill_type: bill.type,
+            congress_number: bill.congress,
+            bioguide_id: bioguideId,
+            is_main_sponsor: isSponsored,
+          };
+
+          const existingBillInvolvement = await billInvolvementModel.get(
+            billInvolvement.bill_type,
+            billInvolvement.bill_number,
+            billInvolvement.congress_number
+          );
+
+          if (!existingBillInvolvement) {
+            billInvolvementsToAdd.push(billInvolvement);
+          }
+
+          if (existingBill) {
+            return { bill: existingBill, needsFetch: false };
+          } else {
+            return { bill, needsFetch: true };
+          }
+        })
+      );
+
+      processedBills.forEach(({ bill, needsFetch }) => {
+        if (needsFetch) {
+          billsToFetch.push(bill);
+        } else {
+          allBills.push(bill);
+        }
+      });
+
+      nextUrl = data.pagination?.next;
+    }
+
+    // Fetch bill details concurrently
+    const newBillsDetails = await Promise.all(
+      billsToFetch.map((bill) => getBillDetails(bill.url, { api_Key: apiKey }))
+    );
+
+    const newBills: Array<bills["Insert"]> = newBillsDetails
+      .map((billDetails) => {
+        if (!billDetails.bill) {
+          return null;
+        }
+        return {
+          name: billDetails.bill.title,
+          sponsors: billDetails.bill.sponsors,
+          cosponsors: billDetails.bill.cosponsors,
+          type: billDetails.bill.type,
+          introduced_date: billDetails.bill.introducedDate,
+          chamber: billDetails.bill.originChamber,
+          congress_number: billDetails.bill.congress,
+          summary: billDetails.bill.summaries,
+          number: parseInt(billDetails.bill.number),
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+      })
+      .filter((bill) => bill !== null);
+
+    // Bulk insert new bills
+    console.log("newBillsExample", newBills[0]);
+    console.log("newBillsLength", newBills.length);
+    if (newBills.length > 0) {
+      await Promise.all(newBills.map((bill) => billModel.insert(bill)));
+    }
+
+    allBills.push(...newBills);
+
+    // Bulk insert bill involvements
+    if (billInvolvementsToAdd.length > 0) {
+      await billInvolvementModel.bulkInsert(billInvolvementsToAdd);
+    }
+
+    return allBills;
+  } catch (error) {
+    console.error("Error in getBillsForMember:", error);
+    throw error;
   }
-
-  const newBillsDetails = await Promise.all(
-    billsToFetch.map((bill) => getBillDetails(bill.url, { api_Key: apiKey }))
-  );
-
-  const newBills = newBillsDetails.map((billDetails) => ({
-    title: billDetails.bill.title,
-    sponsors: billDetails.bill.sponsors,
-    cosponsors: { count: billDetails.bill.cosponsors.count },
-    type: billDetails.bill.type,
-    introducedDate: billDetails.bill.introducedDate,
-    originChamber: billDetails.bill.originChamber,
-    congress_number: billDetails.bill.congress,
-    summaries: { count: billDetails.bill.summaries.count },
-    number: parseInt(billDetails.bill.number),
-  }));
-
-  if (newBills.length > 0) {
-    await Promise.all(newBills.map((bill) => billModel.insert(bill)));
-  }
-
-  allBills.push(...newBills);
-
-  if (billInvolvementsToAdd.length > 0) {
-    await billInvolvementModel.bulkInsert(billInvolvementsToAdd);
-  }
-
-  return allBills;
 };
 
 const getBillDetails = async (url: string, queryParams: any): Promise<any> => {
   const finalUrl = addQueryParams(url, queryParams, false);
   const response = await axios.get(finalUrl);
+  console.log("response", response.data);
   return response.data;
 };
 
